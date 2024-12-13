@@ -25,7 +25,7 @@ enum Result<T, E> {
 One example of a recoverable error is when getting data from over the Internet, since it is common and expected to receive an HTTP error code. For example:
 
 ### Rust
-```rust=
+```rust
 fn main() {
     let response = get_response_body();
     match response {
@@ -53,7 +53,7 @@ Note that the `get_response_body()` function returns a `Result` type, which need
 The equivalent code written in Java uses exceptions and try catch statements:
 
 ### Java
-```java=
+```java
 public static void main(String[] args) {
     try {
         System.out.println(getResponseBody());
