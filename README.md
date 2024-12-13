@@ -1,6 +1,7 @@
 # Errors As Types
 
 Comparing Rust’s type driven errors with Java exceptions
+
 By: Ben Simmons, Rocky Slaymaker
 
 ## Recoverable Vs Unrecoverable Errors
