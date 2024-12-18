@@ -1,25 +1,34 @@
 # Errors As Types
 
-Comparing Rust’s type driven errors with Java exceptions
-
+#### Errors as Unexpected Exceptions or Expected Results in Java and Rust  
 By: Ben Simmons, Rocky Slaymaker
 
 ## Recoverable Vs Unrecoverable Errors
 
-Firstly, Rust and Java distinguish between two main categories of error, recoverable and unrecoverable errors. As the name suggests, unrecoverable errors are deemed too critical to recover from and call for the whole program to come to a stop. This is also called a “panic” in rust terminology. Once a program panics, there is no way to stop the program from quitting. 
+Rust and Java both distinguish between two main categories of error: recoverable and unrecoverable errors. Unrecoverable errors force the whole program to stop. Rust calls this a "panic." Once a program panics, there is no way to prevent it from quitting. Recoverable errors, notated in Java as "exceptions," can be caught using a try-catch block if they're not serious enough to force a crash.
 
-Java does have some unrecoverable errors, but they focus on issues with the JVM, such as an `OutOfMemoryError`, rather than programming mistakes. Rust is more strict on what errors are recoverable. An example of something that will cause a panic in Rust but is allowable in Java is indexing an array out of bounds. In Java, indexing and array out of bounds results in a `ArrayIndexOutOfBoundsException`, which can be caught and recovered from. Rust's philosophy, as a low level system language, says indexing out of bounds should never be allowable. 
+Java's unrecoverable errors focus on issues with the runtime, like `OutOfMemoryError`, instead of programming mistakes, while Rust is more strict on what errors are recoverable. For example, in Java, indexing an array out of bounds results in a recoverable `ArrayIndexOutOfBoundsException`. Rust's philosophy, as a low level system language, says indexing out of bounds should never be allowable. 
 
-Recoverable errors on the other hand are not serious enough to warrant the complete stoppage of a program and can be handled. There is often a legitimate reason for a function to fail. In Java, recoverable errors fall into the category of exceptions.
+Java's concept of recoverable exceptions exceptions has some notable problems: 
+- They break "atomicity," making malformed objects possible. For example, if you're running a method that changes two variables that are always meant to go together, but an exception happens in between the changes, the object could end up in an unexpected state if the exception is caught.
+- They create an implicit control flow, making it harder to follow the call stack because exceptions can suddenly "jump" up the stack to wherever they're caught.
+- Unchecked exceptions are completely invisible, both to the user and the compiler, until they happen at runtime.
+- They allow for "silent failures," in which a try-catch block makes an otherwise dangerous error invisible. This allows the program to continue with bad data, which is obviously problematic.
+
+Despite those downsides, exceptions are also useful:
+- They automatically "bubble up" the call stack without needing to manually return them. 
+- They are also useful for extremely unusual, unexpected scenarios, so you don't have to add a bunch of return types to every function just in case.
+- You can handle multiple exception types at once by just catching their superclass.
+
+To fix these issues, Rust uses a special return type called a Result, which is returned just like anything else. Since they are returned just like any other value, they do not cause any of the problems of Java's exceptions. They don't break atomicity, jump up the call stack, or allow for silent failures, and they require the programmer to make an explicit decision to handle them or panic.
 
 ## Rust Result Type
-The Rust result type is a union type with two varients `Ok` and `Err` where each varient has associated values. This is very simular to the `Option<T>` type but allows for returning information in the error case versus just None.
+The Rust Result type is a union type with two varients `Ok` and `Err` where each variant has associated values. This is very simular to the `Option<T>` type but allows for returning information in the error case versus just None.
 ``` rust
 enum Result<T, E> {
     Ok(T), Err(E), 
 }
 ```
-
 
 ## Example
 
@@ -40,9 +49,9 @@ fn get_response_body() -> Result<String, String> {
     let code = response.get_http_code();
     return match code / 100 {
         2 => Ok(response.get_body()),
-        4 => Err("Error on your end".to_string()),
-        5 => Err("Error on the server end".to_string()),
-        _ => Err("Other".to_string())
+        4 => Err("Client side error".to_string()),
+        5 => Err("Server side error".to_string()),
+        _ => Err("Other error".to_string())
     };
 }
 ```
@@ -51,13 +60,13 @@ In this code, we create a function that could return the HTML body from an HTTP 
 
 Note that the `get_response_body()` function returns a `Result` type, which needs to be unwrapped in the `match` statement in the `main()` function.
 
-The equivalent code written in Java uses exceptions and try catch statements:
+The equivalent code written in Java uses exceptions and try-catch statements:
 
 ### Java
 ```java
 public static void main(String[] args) {
     try {
-        System.out.println(getResponseBody());
+        System.out.println("HTML response: " + getResponseBody());
     } catch (IOException e) {
         System.out.println("Error: " + e.getMessage());
     }
@@ -79,6 +88,6 @@ public static String getResponseBody() throws IOException {
 }
 ```
 
-These errors as types help because, instead of jumping between functions and possibly being thrown all the way to the main method, they work like any other return type. As a result, they are more predictable and cannot result in code unexpectedly being skipped.
+## Conclusion
 
-Java has the notion of checked and un-checked exceptions. The compiler only forces the programer to handle checked exceptions. In contrast, Rust requires that the programmer make an explicit choice of how to handle every result. Therefore, if the program ever crashes it is guaranteed to be from an explicit decision you made instead of an assumption—the exception crashes the program in Java, but the programmer crashes the program in Rust.  In Java, simply the lack of a try-catch is the choice to crash the program (for unchecked exceptions), but Rust forces the programmer to add code with either possibility.
+The names serve as a pretty good summary of the differences. Java's exceptions are meant to be unusual, an exception to the way the code is normally supposed to run. Rust's results are intended to just signify all the possibilities that a function might return, including the errors.
